@@ -1,0 +1,86 @@
+---
+title: "Reproducible Research: Peer Assessment 1"
+output: 
+  html_document:
+    theme: united
+    keep_md: true
+---
+Ian F. McCallum
+2014-10-19
+
+```{r echo=FALSE}
+library(knitr)
+```
+
+```{r setoptions echo=FALSE}
+opts_chunk$set(fig.path="figure/")
+```
+
+**Prerequisites:** 
+- The file 'activity.csv' is the working directory
+
+### Loading and preprocessing the data
+
+Read in the file 'activity.csv' and create a summary by day (called daily.activity), and a summary by invterval (called interval.activity)
+
+```{r load.and.preprocess}
+activity <- read.csv("activity.csv")
+
+library(plyr)
+library(ggplot2)
+
+daily.activity <- ddply(activity, "date", summarise, daily.total=sum(steps))
+interval.activity <- ddply(activity, "interval", 
+                           summarise, mean.steps=mean(steps,na.rm=TRUE))
+
+```
+
+### Question 1: What is mean total number of steps taken per day?
+
+**Prerequisites:**
+- The plyr package has been loaded
+- The ggplot2 package has been loaded
+- The dataframe daily.activity has been created
+
+To plot the histogram of the number of steps, ddply is used to aggregate 
+the data for each day using the data frame
+
+```{r daily.total.histogram}
+
+p <- ggplot(daily.activity, aes(x=daily.activity$daily.total))
+p <- p + geom_histogram(binwidth=2000, fill="orange", colour="lightgrey")
+p <- p + ggtitle("Daily Step Total")
+p <- p + xlab("Steps")
+
+print(p)
+```
+
+## What is the average daily activity pattern?
+
+**Prerequisites:**
+- The plyr package has been loaded
+- The ggplot2 package has been loaded
+- The dataframe daily.activity has been created
+
+To plot the activity by interveral, ddply is used to aggregate 
+the data for each interval
+
+```{r activity.patterns}
+
+p <- ggplot(interval.activity, aes(x=interval, 
+                                   y=mean.steps))
+p <- p + geom_line()
+p <- p + ggtitle("Interval Activity Patterns")
+p <- p + xlab("Invterval")
+p <- p + ylab("Steps")
+print(p)
+
+```
+
+The interval with the most activity is ```{r}
+
+## Imputing missing values
+
+
+
+## Are there differences in activity patterns between weekdays and weekends?
