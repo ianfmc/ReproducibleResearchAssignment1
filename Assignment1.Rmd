@@ -1,51 +1,42 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
+author: "Ian F. McCallum"
+date: "October 19, 2014"
+
 output: 
   html_document:
-    theme: united
     keep_md: true
 ---
-Ian F. McCallum
-2014-10-19
-
-```{r echo=FALSE}
+```{r, echo=FALSE}
 library(knitr)
+knitr::opts_chunk$set(fig.path="figure/")
 ```
-
-```{r setoptions echo=FALSE}
-opts_chunk$set(fig.path="figure/")
-```
-
 **Prerequisites:** 
-- The file 'activity.csv' is the working directory
+
+* The file 'activity.csv' is the working directory
 
 ### Loading and preprocessing the data
 
-Read in the file 'activity.csv' and create a summary by day (called daily.activity), and a summary by invterval (called interval.activity)
+Read in the file 'activity.csv' and create a summary by day (called *daily.activity*), and a summary by invterval (called *interval.activity*)
 
 ```{r load.and.preprocess}
-activity <- read.csv("activity.csv")
-
 library(plyr)
 library(ggplot2)
 
-daily.activity <- ddply(activity, "date", summarise, daily.total=sum(steps))
-interval.activity <- ddply(activity, "interval", 
-                           summarise, mean.steps=mean(steps,na.rm=TRUE))
-
+activity <- read.csv("activity.csv")
 ```
 
 ### Question 1: What is mean total number of steps taken per day?
 
 **Prerequisites:**
-- The plyr package has been loaded
-- The ggplot2 package has been loaded
-- The dataframe daily.activity has been created
 
-To plot the histogram of the number of steps, ddply is used to aggregate 
-the data for each day using the data frame
+* The **plyr** package has been loaded
+* The **ggplot2** package has been loaded
 
-```{r daily.total.histogram}
+To plot the histogram of the number of steps, ddply is used to aggregate the data for each day using the data frame
+
+```{r daily.total}
+daily.activity <- ddply(activity, "date", summarise, daily.total=sum(steps))
 
 p <- ggplot(daily.activity, aes(x=daily.activity$daily.total))
 p <- p + geom_histogram(binwidth=2000, fill="orange", colour="lightgrey")
@@ -55,32 +46,95 @@ p <- p + xlab("Steps")
 print(p)
 ```
 
-## What is the average daily activity pattern?
+The **mean** number of steps is `r round(mean(daily.activity$daily.total, na.rm=TRUE),1)` <br>
+The **median** number of steps is `r round(median(daily.activity$daily.total, na.rm=TRUE),1)`
+
+### What is the average daily activity pattern?
 
 **Prerequisites:**
-- The plyr package has been loaded
-- The ggplot2 package has been loaded
-- The dataframe daily.activity has been created
 
-To plot the activity by interveral, ddply is used to aggregate 
-the data for each interval
+* The **plyr** package has been loaded
+* The **ggplot2** package has been loaded
+
+To plot the activity by interveral, ddply is used to aggregate the data for each interval.
 
 ```{r activity.patterns}
+interval.activity <- ddply(activity, "interval", summarise, mean.steps=mean(steps,na.rm=TRUE))
 
-p <- ggplot(interval.activity, aes(x=interval, 
-                                   y=mean.steps))
+p <- ggplot(interval.activity, aes(x=interval, y=mean.steps))
 p <- p + geom_line()
 p <- p + ggtitle("Interval Activity Patterns")
 p <- p + xlab("Invterval")
 p <- p + ylab("Steps")
-print(p)
 
+print(p)
 ```
 
-The interval with the most activity is ```{r}
+```{r find.max, echo=FALSE}
+max.steps <- max(interval.activity$mean.steps, na.rm=TRUE)
+max.steps.interval <- interval.activity[interval.activity$mean.steps == max.steps, "interval"]
+```
 
-## Imputing missing values
+The interval with the most activity is `r round(max.steps.interval,1)` with `r round(max.steps,1)` steps
 
+### Imputing missing values
 
+**Prerequisites:**
 
-## Are there differences in activity patterns between weekdays and weekends?
+* The **plyr** package has been loaded
+* The **ggplot2** package has been loaded
+
+The missing values will be replaced by the interval average for each individual interval. Then, ddply is used to aggregate the data for each day using the data frame to create a plot the histogram of the number of steps.
+
+```{r missing.values}
+fixed.activity <- activity
+fixed.activity[is.na(fixed.activity$steps), "steps"] <- interval.activity[interval.activity$interval == fixed.activity[is.na(fixed.activity$steps),"interval"],"mean.steps"]
+
+fixed.daily.activity <- ddply(fixed.activity, "date", summarise, daily.total=sum(steps))
+
+p <- ggplot(fixed.daily.activity, aes(x=fixed.daily.activity$daily.total))
+p <- p + geom_histogram(binwidth=2000, fill="lightblue", colour="lightgrey")
+p <- p + ggtitle("Daily Step Total")
+p <- p + xlab("Steps")
+
+print(p)
+```
+
+The **mean** number of steps is `r round(mean(fixed.daily.activity$daily.total, na.rm=TRUE),1)` <br>
+The **median** number of steps is `r round(median(fixed.daily.activity$daily.total, na.rm=TRUE),1)`
+
+A comparison of the means and medians from before the data was is presented below:<br>
+```{r compare, echo=FALSE, results='asis'}
+m.1 <- round(mean(daily.activity$daily.total, na.rm=TRUE),1)
+m.2 <- round(mean(fixed.daily.activity$daily.total, na.rm=TRUE,1))
+
+md.1 <- round(median(daily.activity$daily.total, na.rm=TRUE),1)
+md.2 <- round(median(fixed.daily.activity$daily.total, na.rm=TRUE),1)
+```
+
+The difference between the fixed and original means is: `r m.2-m.1`<br>
+The difference between the fixed and original medians is: `r md.2-md.1`
+
+### Are there differences in activity patterns between weekdays and weekends?
+
+**Prerequisites:**
+
+* The **plyr** package has been loaded
+* The **ggplot2** package has been loaded
+* The *fixed.daily.activity* data frame has been created
+
+The first task is to transform the *activities* data frame by add a column indicating whether the date falls during the week or weekend.
+
+```{r weekday.vs.weekend}
+in.weekend <- function(d) {(weekdays(d) %in% c("Saturday","Sunday"))}
+fixed.activity <- transform(fixed.activity, weekend = in.weekend(as.Date(fixed.activity$date)))
+
+fixed.interval.activity <- ddply(fixed.activity, c("interval","weekend"), summarise, mean.steps=mean(steps,na.rm=TRUE))
+
+p <- ggplot(fixed.interval.activity, aes(x=interval, y=mean.steps))
+p <- p + geom_line()
+p <- p + ylab("Steps")
+p <- p + facet_wrap(~weekend, ncol=1)
+
+print(p)
+```
