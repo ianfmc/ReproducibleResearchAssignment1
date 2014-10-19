@@ -4,5 +4,5 @@ assignment1 <- function() {
   library(markdown)
   
   options(markdown.HTML.options = "")
-  knit2html("Assignment1.Rmd", "Assignment1.html", options="")
+  knit2html("PA1_template.Rmd", "PA1_template.html", options="")
 }
