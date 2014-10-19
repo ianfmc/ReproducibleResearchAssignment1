@@ -17,7 +17,7 @@ knitr::opts_chunk$set(fig.path="figure/")
 
 ### Loading and preprocessing the data
 
-Read in the file 'activity.csv' and create a summary by day (called *daily.activity*), and a summary by invterval (called *interval.activity*)
+Read in the file 'activity.csv' and create a the *activity* dataframe
 
 ```{r load.and.preprocess}
 library(plyr)
@@ -104,7 +104,7 @@ The **mean** number of steps is `r round(mean(fixed.daily.activity$daily.total, 
 The **median** number of steps is `r round(median(fixed.daily.activity$daily.total, na.rm=TRUE),1)`
 
 A comparison of the means and medians from before the data was is presented below:<br>
-```{r compare, echo=FALSE, results='asis'}
+```{r compare, echo=FALSE}
 m.1 <- round(mean(daily.activity$daily.total, na.rm=TRUE),1)
 m.2 <- round(mean(fixed.daily.activity$daily.total, na.rm=TRUE,1))
 
@@ -112,8 +112,10 @@ md.1 <- round(median(daily.activity$daily.total, na.rm=TRUE),1)
 md.2 <- round(median(fixed.daily.activity$daily.total, na.rm=TRUE),1)
 ```
 
-The difference between the fixed and original means is: `r m.2-m.1`<br>
-The difference between the fixed and original medians is: `r md.2-md.1`
+The percentage difference between the repaired and original means is: `r 100*(m.2-m.1)/m.1`<br>
+The percentage difference between the repaired and original medians is: `r 100*(md.2-md.1)/md.2`
+
+Adding the mean values would not change the overall mean, but likely decreased the variance.
 
 ### Are there differences in activity patterns between weekdays and weekends?
 
@@ -126,10 +128,23 @@ The difference between the fixed and original medians is: `r md.2-md.1`
 The first task is to transform the *activities* data frame by add a column indicating whether the date falls during the week or weekend.
 
 ```{r weekday.vs.weekend}
-in.weekend <- function(d) {(weekdays(d) %in% c("Saturday","Sunday"))}
-fixed.activity <- transform(fixed.activity, weekend = in.weekend(as.Date(fixed.activity$date)))
+fixed.activity <- transform(fixed.activity,weekend = weekdays(as.Date(fixed.activity$date)))
+fixed.activity$weekend <- as.character(fixed.activity$weekend)
 
-fixed.interval.activity <- ddply(fixed.activity, c("interval","weekend"), summarise, mean.steps=mean(steps,na.rm=TRUE))
+fixed.activity[fixed.activity$weekend %in% 
+                 c("Monday", 
+                   "Tuesday", 
+                   "Wednesday", 
+                   "Thursday", 
+                   "Friday"), 4] <- "Weekday"
+fixed.activity[fixed.activity$weekend %in% 
+                 c("Saturday", 
+                   "Sunday"), 4] <- "Weekend"
+
+fixed.interval.activity <- ddply(fixed.activity, 
+                                 c("interval","weekend"), 
+                                 summarise, 
+                                 mean.steps=mean(steps,na.rm=TRUE))
 
 p <- ggplot(fixed.interval.activity, aes(x=interval, y=mean.steps))
 p <- p + geom_line()
